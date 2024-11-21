@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  AWS SAM application for fetching data from a REST API, processing it, 
+  and storing it in an S3 bucket using Spring Boot.
+
+Resources:
+
+  # Lambda Function
+  TransactionLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: org.springframework.cloud.function.adapter.aws.FunctionInvoker
+      Runtime: java17
+      CodeUri: ./
+      Timeout: 30
+      MemorySize: 512
+      Policies:
+        - AmazonS3FullAccess
+        - AWSLambdaBasicExecutionRole
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref TransactionDataBucket
+          API_BASE_URL: https://api.hiro.so/extended/v2
+          MAIN_CLASS: com.bilal.hundal1.BlockBurnTransactionsApplication
+
+  # S3 Bucket
+  TransactionDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldData
+            Status: Enabled
+            ExpirationInDays: 30
+
+  # EventBridge Rule for Scheduling Lambda Invocation
+  TransactionSchedulerRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: "rate(1 minute)"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt TransactionLambdaFunction.Arn
+          Id: "TransactionLambdaTarget"
+
+  # Permission for EventBridge to Invoke Lambda
+  TransactionLambdaPermissionForEvents:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref TransactionLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt TransactionSchedulerRule.Arn
+
+Outputs:
+
+  LambdaFunctionARN:
+    Description: ARN of the Transaction Processing Lambda Function
+    Value: !GetAtt TransactionLambdaFunction.Arn
+
+  TransactionDataBucketName:
+    Description: Name of the S3 bucket for transaction data
+    Value: !Ref TransactionDataBucket
