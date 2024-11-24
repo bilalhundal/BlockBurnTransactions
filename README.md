@@ -111,3 +111,5 @@ Confirm the data format in JSON files is compatible with QuickSight transformati
 Customizations
 API Endpoint: Update the API_BASE_URL environment variable in the template.yaml file for different Hiro API endpoints.
 Analysis Enhancements: Extend the Lambda function to perform pre-analysis (e.g., aggregations) before storing data in S3.
+
+CLI Screenshots of Successful run of this project can be found here https://github.com/bilalhundal/BlackBurnTransactionProject-RunDeploy-Screenshots.git
